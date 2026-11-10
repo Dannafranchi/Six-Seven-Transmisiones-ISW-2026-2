@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal } from 'antd';
+import { Button, Input, Modal, Select, Table } from 'antd';
 import PageHeader from '../components/ui/PageHeader';
 
 const estiloTarjeta = {
@@ -14,7 +14,7 @@ const estiloTarjeta = {
 const estiloFormulario = {
   display: 'grid',
   gridTemplateColumns: '2fr 1fr',
-  gap: '10px 10px',
+  gap: '10px',
 };
 
 const estiloCampo = {
@@ -30,20 +30,81 @@ const estiloInput = {
   padding: '8px 12px',
 };
 
+const etiquetasTipo = {
+  CAMARA: 'Cámara',
+  TRIPODE: 'Trípode',
+  MICROFONO: 'Micrófono',
+  PANEL_SONIDO: 'Panel de sonido',
+  CABLE: 'Cable',
+  PANEL_SWITCH: 'Panel switch',
+  OTRO: 'Otro',
+};
+
 function Equipos() {
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [equipos, setEquipos] = useState([]);
+  const [filtroNombre, setFiltroNombre] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('');
+
+  const equiposFiltrados = equipos.filter((equipo) => {
+    const coincideNombre = equipo.nombre
+      .toLowerCase()
+      .includes(filtroNombre.toLowerCase());
+
+    const coincideTipo = !filtroTipo || equipo.tipo === filtroTipo;
+
+    return coincideNombre && coincideTipo;
+  });
+
+  const columnas = [
+    {
+      title: 'Nombre',
+      dataIndex: 'nombre',
+      key: 'nombre',
+    },
+    {
+      title: 'Modelo',
+      dataIndex: 'modelo',
+      key: 'modelo',
+    },
+    {
+      title: 'Año',
+      dataIndex: 'anio',
+      key: 'anio',
+      render: (anio) => anio ?? '—',
+    },
+    {
+      title: 'Tipo',
+      dataIndex: 'tipo',
+      key: 'tipo',
+      render: (tipo) => etiquetasTipo[tipo] ?? tipo,
+    },
+    {
+      title: 'Precio CLP',
+      dataIndex: 'precioCompra',
+      key: 'precioCompra',
+      render: (precio) => `$${precio.toLocaleString('es-CL')}`,
+    },
+  ];
 
   function guardarEquipo(event) {
     event.preventDefault();
 
-    const datos = Object.fromEntries(new FormData(event.target));
+    const formulario = event.currentTarget;
+    const datos = Object.fromEntries(new FormData(formulario));
+
     const equipo = {
       ...datos,
       anio: datos.anio ? Number(datos.anio) : null,
       precioCompra: Number(datos.precioCompra),
+      key: crypto.randomUUID(),
     };
 
-    console.log(equipo);
+    // Estado temporal del frontend; más adelante se conectará con la API.
+    setEquipos((actuales) => [...actuales, equipo]);
+
+    formulario.reset();
+    setModalAbierto(false);
   }
 
   return (
@@ -53,21 +114,49 @@ function Equipos() {
         description="Gestiona los equipos del inventario."
       />
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          marginBottom: 16,
+        }}
+      >
+        <Button
+          type="primary"
           onClick={() => setModalAbierto(true)}
-          style={{
-            backgroundColor: '#ffffff',
-            padding: '12px 30px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-          }}
         >
-           Nuevo Equipo
-        </button>
+          Nuevo Equipo
+        </Button>
       </div>
+
+      <div style={{ display: 'flex', gap: 12, margin: '20px 0' }}>
+        <Input
+          placeholder="Filtrar por nombre"
+          value={filtroNombre}
+          onChange={(event) => setFiltroNombre(event.target.value)}
+          style={{ maxWidth: 280 }}
+        />
+
+        <Select
+          allowClear
+          placeholder="Filtrar por tipo"
+          value={filtroTipo || undefined}
+          onChange={(tipo) => setFiltroTipo(tipo || '')}
+          style={{ width: 220 }}
+          options={Object.entries(etiquetasTipo).map(([value, label]) => ({
+            value,
+            label,
+          }))}
+        />
+      </div>
+
+      <Table
+        columns={columnas}
+        dataSource={equiposFiltrados}
+        rowKey="key"
+        pagination={{ pageSize: 8 }}
+        locale={{ emptyText: 'Aún no hay equipos creados' }}
+      />
 
       <Modal
         title="Crear Nuevo Equipo"
@@ -136,18 +225,9 @@ function Equipos() {
               marginTop: 20,
             }}
           >
-            <button
-              type="submit"
-              style={{
-                padding: '12px 30px',
-                backgroundColor: '#ffffff',
-                fontSize: '15px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-              }}
-            >
+            <Button type="primary" htmlType="submit">
               Crear Equipo
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
