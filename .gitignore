@@ -28,8 +28,11 @@ out/
 Thumbs.db
 .vscode/
 .idea/
-.claude
 
 # Prisma
 /server/prisma/*.db
 /server/prisma/*.db-journal
+.agents 
+.claude
+.cursor
+.devin
