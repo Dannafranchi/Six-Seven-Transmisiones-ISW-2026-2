@@ -4,8 +4,7 @@ export function apiUrl(path = '') {
     if (!API_URL) {
         throw new Error(
             'VITE_API_URL no esta definida. Verifica tu archivo client/.env o client/.env.production'
-        );
-        
+        );  
     }
     return `${API_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }

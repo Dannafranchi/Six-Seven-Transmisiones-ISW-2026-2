@@ -244,11 +244,12 @@ function Equipos() {
             <label style={estiloCampo}>
               Año
               <input
-                name="anio"
-                type="number"
-                min="1"
-                max={new Date().getFullYear()}
-                style={estiloInput}
+                 name="anio"
+                    type="number"
+                    min="1980"
+                    max={new Date().getFullYear()}
+                    step="1"
+                    style={estiloInput}
               />
             </label>
 
