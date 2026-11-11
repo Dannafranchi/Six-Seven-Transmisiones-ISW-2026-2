@@ -8,6 +8,7 @@ const CATEGORIAS = [
 ];
 
 const formatoFecha = new Intl.DateTimeFormat('es-CL', { timeZone: 'UTC' });
+const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
   const [form] = Form.useForm();
@@ -86,12 +87,16 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
               rules={[{ required: true, message: 'Elige la transmisión' }]}
             >
               <Select
-                placeholder="Elige una transmisión"
+                placeholder="Busca por nombre o fecha (ej: Copa, 14-11-2026)"
+                showSearch={{
+                  filterOption: (busqueda, opcion) => normalizar(opcion.label).includes(normalizar(busqueda)),
+                }}
                 options={opciones.transmisiones.map((t) => ({
                   value: t.id,
                   label: `${t.nombre} (${formatoFecha.format(new Date(t.fecha))})`,
                 }))}
               />
+
             </Form.Item>
           )}
 
