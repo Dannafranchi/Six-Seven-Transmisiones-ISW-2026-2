@@ -79,3 +79,90 @@ model ReparacionEquipo {
 
   @@index([equipoId, fechaInicio])
 }
+
+// ==========================================================
+// FINANZAS (Danae)
+// ==========================================================
+
+// ES SIMULADA
+model Transmision {
+  id     String   @id @default(uuid())
+  nombre String   @db.VarChar(150)
+  fecha  DateTime @db.Date
+
+  gastos       Gasto[]
+  auspicios    Auspicio[]
+  asignaciones Asignacion[]
+
+  @@index([fecha])
+}
+
+model Gasto {
+  id          String   @id @default(uuid())
+  tipo        String   @db.VarChar(100)
+  descripcion String   @db.VarChar(255)
+  valor       Decimal  @db.Decimal(12, 0)
+  fecha       DateTime @default(now()) @db.Date
+  comprobante String?  @db.VarChar(255)
+
+  transmisionId String?
+  transmision   Transmision? @relation(fields: [transmisionId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fecha])
+  @@index([transmisionId])
+}
+
+// ES SIMULADA
+enum TipoAuspicio {
+  MONETARIO
+  CANJE
+}
+
+// ES SIMULADA
+model Auspicio {
+  id    String       @id @default(uuid())
+  marca String       @db.VarChar(150)
+  tipo  TipoAuspicio
+  valor Decimal      @db.Decimal(12, 0)
+
+  transmisionId String
+  transmision   Transmision @relation(fields: [transmisionId], references: [id], onDelete: Restrict)
+
+  @@index([transmisionId])
+}
+
+// ES SIMULADA
+enum TipoCargo {
+  CAMAROGRAFO
+  SONIDISTA
+  DIRECTOR
+  PRODUCTOR
+  OTRO
+}
+
+// ES SIMULADA
+model Trabajador {
+  id     String @id @default(uuid())
+  nombre String @db.VarChar(150)
+
+  asignaciones Asignacion[]
+}
+
+// ES SIMULADA
+model Asignacion {
+  id    String    @id @default(uuid())
+  cargo TipoCargo
+  pago  Decimal   @db.Decimal(12, 0)
+
+  trabajadorId String
+  trabajador   Trabajador @relation(fields: [trabajadorId], references: [id], onDelete: Restrict)
+
+  transmisionId String
+  transmision   Transmision @relation(fields: [transmisionId], references: [id], onDelete: Restrict)
+
+  @@unique([trabajadorId, transmisionId, cargo])
+  @@index([transmisionId])
+}
