@@ -10,4 +10,16 @@ async function listarGastos(req, res) {
   }
 }
 
-module.exports = { listarGastos };
+async function obtenerOpciones(req, res) {
+  try {
+    const opciones = await gastosService.obtenerOpciones();
+    res.json(opciones);
+
+  } catch(error){
+    console.error('Error al obtener opciones', error);
+    res.status(500).json({ message: 'No se pudieron obtener las opciones' });
+  }
+
+}
+
+module.exports = { listarGastos, obtenerOpciones};
