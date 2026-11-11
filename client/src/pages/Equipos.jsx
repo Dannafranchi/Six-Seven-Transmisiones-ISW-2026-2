@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Button, Input, Modal, Select, Table } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Alert, Button, Input, Modal, Select, Table } from 'antd';
 import PageHeader from '../components/ui/PageHeader';
+import { apiFetch } from '../services/api';
 
 const estiloTarjeta = {
   backgroundColor: '#ffffff',
@@ -45,12 +46,42 @@ function Equipos() {
   const [equipos, setEquipos] = useState([]);
   const [filtroNombre, setFiltroNombre] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('');
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [errorCarga, setErrorCarga] = useState('');
+  const [errorFormulario, setErrorFormulario] = useState('');
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function cargarEquipos() {
+      try {
+        const resultado = await apiFetch('/equipos');
+        if (!cancelado) {
+          setEquipos(resultado);
+        }
+      } catch (error) {
+        if (!cancelado) {
+          setErrorCarga(error.message);
+        }
+      } finally {
+        if (!cancelado) {
+          setCargando(false);
+        }
+      }
+    }
+
+    cargarEquipos();
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   const equiposFiltrados = equipos.filter((equipo) => {
     const coincideNombre = equipo.nombre
       .toLowerCase()
       .includes(filtroNombre.toLowerCase());
-
     const coincideTipo = !filtroTipo || equipo.tipo === filtroTipo;
 
     return coincideNombre && coincideTipo;
@@ -83,28 +114,40 @@ function Equipos() {
       title: 'Precio CLP',
       dataIndex: 'precioCompra',
       key: 'precioCompra',
-      render: (precio) => `$${precio.toLocaleString('es-CL')}`,
+      render: (precio) => `$${Number(precio).toLocaleString('es-CL')}`,
     },
   ];
 
-  function guardarEquipo(event) {
+  async function guardarEquipo(event) {
     event.preventDefault();
 
     const formulario = event.currentTarget;
     const datos = Object.fromEntries(new FormData(formulario));
-
-    const equipo = {
+    const equipoNuevo = {
       ...datos,
       anio: datos.anio ? Number(datos.anio) : null,
       precioCompra: Number(datos.precioCompra),
-      key: crypto.randomUUID(),
     };
 
-    // Estado temporal del frontend; más adelante se conectará con la API.
-    setEquipos((actuales) => [...actuales, equipo]);
+    setGuardando(true);
+    setErrorFormulario('');
 
-    formulario.reset();
-    setModalAbierto(false);
+    try {
+      const equipoCreado = await apiFetch('/equipos', {
+        method: 'POST',
+        body: JSON.stringify(equipoNuevo),
+      });
+
+      setEquipos((actuales) => [equipoCreado, ...actuales]);
+      setFiltroNombre('');
+      setFiltroTipo('');
+      formulario.reset();
+      setModalAbierto(false);
+    } catch (error) {
+      setErrorFormulario(error.message);
+    } finally {
+      setGuardando(false);
+    }
   }
 
   return (
@@ -121,10 +164,7 @@ function Equipos() {
           marginBottom: 16,
         }}
       >
-        <Button
-          type="primary"
-          onClick={() => setModalAbierto(true)}
-        >
+        <Button type="primary" onClick={() => setModalAbierto(true)}>
           Nuevo Equipo
         </Button>
       </div>
@@ -141,7 +181,7 @@ function Equipos() {
           allowClear
           placeholder="Filtrar por tipo"
           value={filtroTipo || undefined}
-          onChange={(tipo) => setFiltroTipo(tipo || '')}
+          onChange={(tipo) => setFiltroTipo(tipo ?? '')}
           style={{ width: 220 }}
           options={Object.entries(etiquetasTipo).map(([value, label]) => ({
             value,
@@ -150,10 +190,21 @@ function Equipos() {
         />
       </div>
 
+      {errorCarga && (
+        <Alert
+          type="error"
+          showIcon
+          message="No se pudieron cargar los equipos"
+          description={errorCarga}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       <Table
         columns={columnas}
         dataSource={equiposFiltrados}
-        rowKey="key"
+        rowKey="id"
+        loading={cargando}
         pagination={{ pageSize: 8 }}
         locale={{ emptyText: 'Aún no hay equipos creados' }}
       />
@@ -161,12 +212,24 @@ function Equipos() {
       <Modal
         title="Crear Nuevo Equipo"
         open={modalAbierto}
-        onCancel={() => setModalAbierto(false)}
+        onCancel={() => {
+          setModalAbierto(false);
+          setErrorFormulario('');
+        }}
         footer={null}
         width={500}
         destroyOnClose
       >
         <form onSubmit={guardarEquipo} style={estiloTarjeta}>
+          {errorFormulario && (
+            <Alert
+              type="error"
+              showIcon
+              message={errorFormulario}
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
           <div style={estiloFormulario}>
             <label style={{ ...estiloCampo, gridColumn: '1 / -1' }}>
               Nombre
@@ -181,11 +244,12 @@ function Equipos() {
             <label style={estiloCampo}>
               Año
               <input
-                name="anio"
-                type="number"
-                min="1990"
-                max={new Date().getFullYear()}
-                style={estiloInput}
+                 name="anio"
+                    type="number"
+                    min="1980"
+                    max={new Date().getFullYear()}
+                    step="1"
+                    style={estiloInput}
               />
             </label>
 
@@ -195,13 +259,11 @@ function Equipos() {
                 <option value="" disabled>
                   Seleccione un tipo
                 </option>
-                <option value="CAMARA">Cámara</option>
-                <option value="TRIPODE">Trípode</option>
-                <option value="MICROFONO">Micrófono</option>
-                <option value="PANEL_SONIDO">Panel de sonido</option>
-                <option value="CABLE">Cable</option>
-                <option value="PANEL_SWITCH">Panel switch</option>
-                <option value="OTRO">Otro</option>
+                {Object.entries(etiquetasTipo).map(([value, label]) => (
+                  <option value={value} key={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -225,7 +287,7 @@ function Equipos() {
               marginTop: 20,
             }}
           >
-            <Button type="primary" htmlType="submit">
+            <Button type="primary" htmlType="submit" loading={guardando}>
               Crear Equipo
             </Button>
           </div>
