@@ -27,7 +27,7 @@ async function crearGasto(req, res) {
     res.status(201).json(gastoCreado);
   } catch(error){
     console.error('Error al crear el Gasto', error);
-    res.status(500).json({menssage: 'No se pudo ingresar un Nuevo Gasto'})
+    res.status(500).json({message: 'No se pudo ingresar un Nuevo Gasto'})
   }
 }
 
