@@ -18,7 +18,10 @@ export async function apiFetch(path, options = {}) {
         ...options,
     });
     if (!res.ok) {
-        throw new Error(`Error en la solicitud a ${path}: ${res.status} ${res.statusText}`);
+        const respuesta = await res.json();
+        throw new Error(
+            respuesta.error || `Error en la solicitud a ${path}: ${res.status} ${res.statusText}`
+        );
     }
     return res.status === 204 ? null : res.json();
 }

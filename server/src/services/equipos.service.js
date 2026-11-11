@@ -18,6 +18,13 @@ function errorDeValidacion(mensaje) {
   return error;
 }
 
+async function listarEquipos() {
+  return prisma.equipo.findMany({
+    where: { archivadoAt: null },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 async function crearEquipo(datos) {
   if (!datos || typeof datos !== 'object' || Array.isArray(datos)) {
     throw errorDeValidacion('Envía los datos del artefacto.');
@@ -62,4 +69,4 @@ async function crearEquipo(datos) {
   });
 }
 
-module.exports = { crearEquipo };
+module.exports = { listarEquipos, crearEquipo };

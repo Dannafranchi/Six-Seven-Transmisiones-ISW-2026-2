@@ -1,5 +1,15 @@
 const equiposService = require('../services/equipos.service');
 
+async function listar(req, res) {
+  try {
+    const equipos = await equiposService.listarEquipos();
+    return res.json(equipos);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'No se pudieron listar los equipos.' });
+  }
+}
+
 async function crear(req, res) {
   try {
     const equipo = await equiposService.crearEquipo(req.body);
@@ -14,4 +24,4 @@ async function crear(req, res) {
   }
 }
 
-module.exports = { crear };
+module.exports = { listar, crear };
