@@ -27,7 +27,6 @@ async function crearGasto(gastoData) {
     ...nuevoGasto,
     valor: Number(nuevoGasto.valor),
   };
-
 }
 
 async function obtenerOpciones() {

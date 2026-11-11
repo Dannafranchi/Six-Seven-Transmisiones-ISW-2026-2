@@ -19,7 +19,16 @@ async function obtenerOpciones(req, res) {
     console.error('Error al obtener opciones', error);
     res.status(500).json({ message: 'No se pudieron obtener las opciones' });
   }
-
 }
 
-module.exports = { listarGastos, obtenerOpciones};
+async function crearGasto(req, res) {
+  try{
+    const gastoCreado = await gastosService.crearGasto(req.body);
+    res.status(201).json(gastoCreado);
+  } catch(error){
+    console.error('Error al crear el Gasto', error);
+    res.status(500).json({menssage: 'No se pudo ingresar un Nuevo Gasto'})
+  }
+}
+
+module.exports = { listarGastos, obtenerOpciones, crearGasto};
