@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Tag, Typography } from 'antd';
+import { Button, Table, Tag, Typography } from 'antd';
+import { Plus } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import { obtenerGastos } from '../services/gastos.api';
 
@@ -35,12 +36,19 @@ const GastosOperativos = () => {
   const [gastos, setGastos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [modalAbierto, setModalAbierto] = useState(false);
 
-  useEffect(() => {
+  const cargarGastos = () => {
+    setCargando(true);
+    setError(null);
     obtenerGastos()
       .then(setGastos)
       .catch(() => setError('No se pudieron cargar los gastos. ¿Está encendido el servidor?'))
       .finally(() => setCargando(false));
+  };
+
+  useEffect(() => {
+    cargarGastos();
   }, []);
 
   return (
@@ -49,16 +57,25 @@ const GastosOperativos = () => {
         title="Gastos Operativos"
         description="Aquí puedes gestionar y revisar los gastos operativos de la empresa."
       />
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <Button type="primary" onClick={() => setModalAbierto(true)}>
+          Nuevo Gasto
+        </Button>
+      </div>
+
       {error && <Typography.Text type="danger">{error}</Typography.Text>}
+
       <Table
         rowKey="id"
         columns={columnas}
         dataSource={gastos}
         loading={cargando}
         pagination={false}
+        locale={{ emptyText: 'Aún no hay gastos registrados' }}
       />
     </div>
   );
-};
 
+};
 export default GastosOperativos;
