@@ -3,6 +3,8 @@ import { Button, Table, Tag, Typography } from 'antd';
 import { Plus } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import { obtenerGastos } from '../services/gastos.api';
+import NuevoGastoModal from '../components/gastos/NuevoGastoModal';
+
 
 const formatoPesos = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
 const formatoFecha = new Intl.DateTimeFormat('es-CL', { timeZone: 'UTC' });
@@ -74,6 +76,13 @@ const GastosOperativos = () => {
         pagination={false}
         locale={{ emptyText: 'Aún no hay gastos registrados' }}
       />
+
+      <NuevoGastoModal
+        abierto={modalAbierto}
+        onCerrar={() => setModalAbierto(false)}
+        onCreado={cargarGastos}
+      />
+
     </div>
   );
 
