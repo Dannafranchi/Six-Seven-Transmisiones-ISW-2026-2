@@ -1,5 +1,7 @@
 const { z } = require('zod');
 const { TIPOS_GASTO_GENERAL, TIPOS_GASTO_TRANSMISION } = require('../constants/tiposGasto');
+const hoyEnChile = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
 
 const crearGastoSchema = z
   .object({
@@ -13,7 +15,10 @@ const crearGastoSchema = z
       .number({ error: 'El valor debe ser un número' })
       .int('El valor debe ser un número entero')
       .positive('El valor debe ser mayor que 0'),
-    fecha: z.coerce.date({ error: 'La fecha no es válida' }).optional(),
+    fecha: z.coerce
+      .date({ error: 'La fecha no es válida' })
+      .refine((fecha) => fecha.toISOString().slice(0, 10) <= hoyEnChile(), 'La fecha no puede ser posterior a hoy')
+      .optional(),
     transmisionId: z.uuid('La transmisión no es válida').optional(),
   })
   .superRefine((datos, ctx) => {
