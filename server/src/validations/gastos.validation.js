@@ -1,11 +1,11 @@
 const { z } = require('zod');
-const { TIPOS_GASTO_GENERAL, TIPOS_GASTO_TRANSMISION } = require('../constants/tiposGasto');
+const { TipoGasto } = require('@prisma/client');
 const hoyEnChile = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
 
 const crearGastoSchema = z
   .object({
-    tipo: z.string({ error: 'El tipo es obligatorio' }).trim().min(1, 'El tipo es obligatorio'),
+    tipo: z.enum(Object.values(TipoGasto), { error: 'Elige un tipo de gasto válido' }),
     descripcion: z
       .string({ error: 'La descripción es obligatoria' })
       .trim()
@@ -23,11 +23,11 @@ const crearGastoSchema = z
   })
   .superRefine((datos, ctx) => {
     if (datos.transmisionId) {
-      if (!TIPOS_GASTO_TRANSMISION.includes(datos.tipo)) {
+      if (!datos.tipo.startsWith('TRANSMISION_')) {
         ctx.addIssue({ code: 'custom', path: ['tipo'], message: 'Tipo no válido para un gasto de transmisión' });
       }
     } else {
-      if (!TIPOS_GASTO_GENERAL.includes(datos.tipo)) {
+      if (!datos.tipo.startsWith('GENERAL_')) {
         ctx.addIssue({ code: 'custom', path: ['tipo'], message: 'Tipo no válido para un gasto general' });
       }
       if (!datos.fecha) {
