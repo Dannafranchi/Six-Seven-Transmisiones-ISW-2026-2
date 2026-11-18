@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import { obtenerGastos } from '../services/gastos.api';
 import NuevoGastoModal from '../components/gastos/NuevoGastoModal';
+import { etiquetasTipoGasto } from '../components/gastos/etiquetasTipoGasto';
 
 
 const formatoPesos = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
@@ -16,7 +17,7 @@ const columnas = [
     key: 'fecha',
     render: (fecha) => formatoFecha.format(new Date(fecha)),
   },
-  { title: 'Tipo', dataIndex: 'tipo', key: 'tipo' },
+  { title: 'Tipo', dataIndex: 'tipo', key: 'tipo', render: (tipo) => etiquetasTipoGasto[tipo] ?? tipo },
   { title: 'Descripción', dataIndex: 'descripcion', key: 'descripcion' },
   {
     title: 'Transmisión',
