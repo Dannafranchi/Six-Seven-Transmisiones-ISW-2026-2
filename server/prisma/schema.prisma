@@ -7,6 +7,7 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 model User {
   id    Int     @id @default(autoincrement())
   email String  @unique
@@ -97,13 +98,28 @@ model Transmision {
   @@index([fecha])
 }
 
+// el prefijo dice la categoria: GENERAL_ (mensual) o TRANSMISION_.
+enum TipoGasto {
+  GENERAL_ARRIENDO
+  GENERAL_SERVICIOS_BASICOS
+  GENERAL_INTERNET
+  GENERAL_SOFTWARE_SUSCRIPCIONES
+  GENERAL_OTRO
+  TRANSMISION_TRANSPORTE
+  TRANSMISION_ALIMENTACION
+  TRANSMISION_ALOJAMIENTO
+  TRANSMISION_ARRIENDO_EQUIPOS
+  TRANSMISION_OTRO
+}
+
 model Gasto {
   id          String   @id @default(uuid())
-  tipo        String   @db.VarChar(100)
   descripcion String   @db.VarChar(255)
   valor       Decimal  @db.Decimal(12, 0)
   fecha       DateTime @default(now()) @db.Date
   comprobante String?  @db.VarChar(255)
+
+  tipo TipoGasto
 
   transmisionId String?
   transmision   Transmision? @relation(fields: [transmisionId], references: [id], onDelete: Restrict)
