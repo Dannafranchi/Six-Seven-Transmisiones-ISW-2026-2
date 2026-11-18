@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { DatePicker, Form, Input, InputNumber, Modal, Segmented, Select, message } from 'antd';
 import { crearGasto, obtenerOpciones } from '../../services/gastos.api';
+import { etiquetasTipoGasto } from './etiquetasTipoGasto';
+
 
 const CATEGORIAS = [
   { label: 'Gasto general', value: 'general' },
@@ -101,7 +103,7 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
           )}
 
           <Form.Item name="tipo" label="Tipo" rules={[{ required: true, message: 'Elige el tipo de gasto' }]}>
-            <Select placeholder="Elige un tipo" options={tipos.map((t) => ({ value: t, label: t }))} />
+            <Select placeholder="Elige un tipo" options={tipos.map((t) => ({ value: t, label: etiquetasTipoGasto[t] ?? t }))} />
           </Form.Item>
 
           <Form.Item
