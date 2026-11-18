@@ -1,6 +1,5 @@
 const prisma = require('../config/prisma');
-const { TIPOS_GASTO_GENERAL } = require('../constants/tiposGasto');
-const {TIPOS_GASTO_TRANSMISION} = require('../constants/tiposGasto');
+const { TipoGasto } = require('@prisma/client');
 const LIMITE_HISTORIAL = 20;
 
 async function listarGastos() {
@@ -35,9 +34,11 @@ async function obtenerOpciones() {
     select: { id: true, nombre: true, fecha: true },
   });
 
+  const tipos = Object.values(TipoGasto);
+
   return {
-    tiposGeneral: TIPOS_GASTO_GENERAL,
-    tiposTransmision: TIPOS_GASTO_TRANSMISION,
+    tiposGeneral: tipos.filter((tipo) => tipo.startsWith('GENERAL_')),
+    tiposTransmision: tipos.filter((tipo) => tipo.startsWith('TRANSMISION_')),
     transmisiones,
   };
 }
