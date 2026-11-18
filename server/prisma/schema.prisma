@@ -98,7 +98,7 @@ model Transmision {
   @@index([fecha])
 }
 
-// Tipos de gasto. El prefijo dice la categoría: GENERAL_ (mensual) o TRANSMISION_.
+// el prefijo dice la categoria: GENERAL_ (mensual) o TRANSMISION_.
 enum TipoGasto {
   GENERAL_ARRIENDO
   GENERAL_SERVICIOS_BASICOS
