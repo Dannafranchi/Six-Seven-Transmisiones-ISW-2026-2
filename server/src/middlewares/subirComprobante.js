@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
@@ -29,6 +30,16 @@ const subida = multer({
   },
 }).single('comprobante');
 
+function borrarSiFalla(req, res) {
+  res.on('finish', () => {
+    if (res.statusCode >= 400) {
+      fs.unlink(req.file.path, (error) => {
+        if (error) console.error('No se pudo borrar el comprobante', error);
+      });
+    }
+  });
+}
+
 function subirComprobante(req, res, next) {
     subida(req, res, (error) => {
     if (error) {
@@ -37,6 +48,9 @@ function subirComprobante(req, res, next) {
           ? `El comprobante no puede superar los ${TAMANO_MAXIMO_MB} MB`
           : error.message;
       return res.status(400).json({ message })
+    }
+    if (req.file) {
+      borrarSiFalla(req, res);
     }
     next();
   });
