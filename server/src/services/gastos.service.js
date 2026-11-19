@@ -52,7 +52,7 @@ async function borrarComprobante(nombre) {
   }
 }
 
-async function eliminarGasto(id) {
+async function obtenerGastoExistente(id) {
   const gasto = await prisma.gasto.findUnique({ where: { id } });
 
   if (!gasto) {
@@ -61,6 +61,34 @@ async function eliminarGasto(id) {
     throw error;
   }
 
+  return gasto;
+}
+
+async function actualizarGasto(id, datos, nuevoComprobante) {
+  const gasto = await obtenerGastoExistente(id);
+
+  const gastoActualizado = await prisma.gasto.update({
+    where: { id },
+    data: {
+      ...datos,
+      transmisionId: datos.transmisionId ?? null,
+      comprobante: nuevoComprobante ?? gasto.comprobante,
+    },
+  });
+
+  if (nuevoComprobante && gasto.comprobante) {
+    await borrarComprobante(gasto.comprobante);
+  }
+
+  return {
+    ...gastoActualizado,
+    valor: Number(gastoActualizado.valor),
+  };
+}
+
+async function eliminarGasto(id) {
+  const gasto = await obtenerGastoExistente(id);
+
   await prisma.gasto.delete({ where: { id } });
 
   if (gasto.comprobante) {
@@ -68,4 +96,5 @@ async function eliminarGasto(id) {
   }
 }
 
-module.exports = { listarGastos, crearGasto, obtenerOpciones, eliminarGasto };
+module.exports = { listarGastos, crearGasto, obtenerOpciones, actualizarGasto, eliminarGasto };
+

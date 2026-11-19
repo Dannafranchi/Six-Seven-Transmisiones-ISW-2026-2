@@ -3,7 +3,7 @@ const { TipoGasto } = require('@prisma/client');
 const hoyEnChile = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date());
 
-const crearGastoSchema = z
+const gastoSchema = z
   .object({
     tipo: z.enum(Object.values(TipoGasto), { error: 'Elige un tipo de gasto válido' }),
     descripcion: z
@@ -40,5 +40,5 @@ const idGastoSchema = z.object({
   id: z.uuid('El id del gasto no es válido'),
 });
 
-module.exports = { crearGastoSchema, idGastoSchema };
+module.exports = { gastoSchema, idGastoSchema };
 

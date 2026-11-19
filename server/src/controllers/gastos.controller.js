@@ -34,6 +34,24 @@ async function crearGasto(req, res) {
   }
 }
 
+async function actualizarGasto(req, res) {
+  try {
+    const gastoActualizado = await gastosService.actualizarGasto(
+      req.params.id,
+      req.body,
+      req.file?.filename,
+    );
+    res.json(gastoActualizado);
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+    console.error('Error al actualizar el Gasto', error);
+    res.status(500).json({ message: 'No se pudo actualizar el gasto' });
+  }
+}
+
+
 async function eliminarGasto(req, res) {
   try {
     await gastosService.eliminarGasto(req.params.id);
@@ -47,4 +65,4 @@ async function eliminarGasto(req, res) {
   }
 }
 
-module.exports = { listarGastos, obtenerOpciones, crearGasto, eliminarGasto };
+module.exports = { listarGastos, obtenerOpciones, crearGasto, actualizarGasto, eliminarGasto };
