@@ -36,4 +36,9 @@ const crearGastoSchema = z
     }
   });
 
-module.exports = { crearGastoSchema };
+const idGastoSchema = z.object({
+  id: z.uuid('El id del gasto no es válido'),
+});
+
+module.exports = { crearGastoSchema, idGastoSchema };
+

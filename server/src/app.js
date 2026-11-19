@@ -1,9 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const healthRouter = require('./routes/health');
+
 const equiposRouter = require('./routes/equipos.routes');
 const gastosRouter = require('./routes/gastos.routes');
-const { CARPETA_COMPROBANTES } = require('./middlewares/subirComprobante');
+const { CARPETA_COMPROBANTES } = require('./config/comprobantes');
+
 const app = express();
 
 app.use(cors());

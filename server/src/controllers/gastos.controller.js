@@ -34,4 +34,17 @@ async function crearGasto(req, res) {
   }
 }
 
-module.exports = { listarGastos, obtenerOpciones, crearGasto};
+async function eliminarGasto(req, res) {
+  try {
+    await gastosService.eliminarGasto(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+    console.error('Error al eliminar el Gasto', error);
+    res.status(500).json({ message: 'No se pudo eliminar el gasto' });
+  }
+}
+
+module.exports = { listarGastos, obtenerOpciones, crearGasto, eliminarGasto };

@@ -1,4 +1,7 @@
+const fs = require('fs/promises');
+const path = require('path');
 const prisma = require('../config/prisma');
+const { CARPETA_COMPROBANTES } = require('../config/comprobantes');
 const { TipoGasto } = require('@prisma/client');
 
 async function listarGastos() {
@@ -20,7 +23,7 @@ async function crearGasto(gastoData) {
     data: gastoData,
   });
 
-   return {
+  return {
     ...nuevoGasto,
     valor: Number(nuevoGasto.valor),
   };
@@ -41,6 +44,28 @@ async function obtenerOpciones() {
   };
 }
 
+async function borrarComprobante(nombre) {
+  try {
+    await fs.unlink(path.join(CARPETA_COMPROBANTES, nombre));
+  } catch (error) {
+    console.error('No se pudo borrar el comprobante', nombre, error.message);
+  }
+}
 
+async function eliminarGasto(id) {
+  const gasto = await prisma.gasto.findUnique({ where: { id } });
 
-module.exports = { listarGastos, crearGasto, obtenerOpciones };
+  if (!gasto) {
+    const error = new Error('El gasto no existe');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  await prisma.gasto.delete({ where: { id } });
+
+  if (gasto.comprobante) {
+    await borrarComprobante(gasto.comprobante);
+  }
+}
+
+module.exports = { listarGastos, crearGasto, obtenerOpciones, eliminarGasto };

@@ -1,9 +1,8 @@
 const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
 
-const CARPETA_COMPROBANTES = path.join(__dirname, '../../uploads/comprobantes');
+const { CARPETA_COMPROBANTES } = require('../config/comprobantes');
 
 const EXTENSIONES = {
     'image/jpeg': '.jpg',
@@ -56,4 +55,4 @@ function subirComprobante(req, res, next) {
   });
 }
 
-module.exports = { subirComprobante, CARPETA_COMPROBANTES };
+module.exports = { subirComprobante };
