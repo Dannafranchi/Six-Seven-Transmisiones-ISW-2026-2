@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Table, Tag, Typography } from 'antd';
+import { Button, DatePicker, Input, Select, Table, Tag, Typography } from 'antd';
 import { Plus } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import { obtenerGastos } from '../services/gastos.api';
@@ -7,10 +7,22 @@ import NuevoGastoModal from '../components/gastos/NuevoGastoModal';
 import { etiquetasTipoGasto } from '../components/gastos/etiquetasTipoGasto';
 import { apiUrl } from '../services/api';
 
-
-
 const formatoPesos = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
 const formatoFecha = new Intl.DateTimeFormat('es-CL', { timeZone: 'UTC' });
+
+// Para buscar sin importar tildes ni mayúsculas ("alimentacion" encuentra "Alimentación").
+const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+// Opciones del filtro de tipo, separadas en dos grupos (hay un "Otro" en cada uno).
+const tiposConPrefijo = (prefijo) =>
+  Object.entries(etiquetasTipoGasto)
+    .filter(([valor]) => valor.startsWith(prefijo))
+    .map(([valor, etiqueta]) => ({ value: valor, label: etiqueta }));
+
+const opcionesTipo = [
+  { label: 'Gastos generales', options: tiposConPrefijo('GENERAL_') },
+  { label: 'Gastos de transmisión', options: tiposConPrefijo('TRANSMISION_') },
+];
 
 const columnas = [
   {
@@ -35,7 +47,7 @@ const columnas = [
     align: 'right',
     render: (valor) => formatoPesos.format(valor),
   },
-    {
+  {
     title: 'Comprobante',
     dataIndex: 'comprobante',
     key: 'comprobante',
@@ -49,7 +61,6 @@ const columnas = [
         '—'
       ),
   },
-
 ];
 
 const GastosOperativos = () => {
@@ -57,6 +68,9 @@ const GastosOperativos = () => {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [filtroDescripcion, setFiltroDescripcion] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('');
+  const [filtroFecha, setFiltroFecha] = useState(null);
 
   const cargarGastos = () => {
     setCargando(true);
@@ -71,6 +85,14 @@ const GastosOperativos = () => {
     cargarGastos();
   }, []);
 
+  // Se calcula en cada render a partir de todos los gastos: no se guarda en el estado.
+  const gastosFiltrados = gastos.filter((gasto) => {
+    const coincideDescripcion = normalizar(gasto.descripcion).includes(normalizar(filtroDescripcion));
+    const coincideTipo = !filtroTipo || gasto.tipo === filtroTipo;
+    const coincideFecha = !filtroFecha || gasto.fecha.slice(0, 10) === filtroFecha.format('YYYY-MM-DD');
+    return coincideDescripcion && coincideTipo && coincideFecha;
+  });
+
   return (
     <div className="p-2">
       <PageHeader
@@ -84,15 +106,46 @@ const GastosOperativos = () => {
         </Button>
       </div>
 
+      <div style={{ display: 'flex', gap: 12, margin: '20px 0' }}>
+
+        <DatePicker
+          placeholder="Filtrar por fecha"
+          format="DD-MM-YYYY"
+          value={filtroFecha}
+          onChange={setFiltroFecha}
+          style={{ width: 200 }}
+        />
+
+        <Input
+          allowClear
+          placeholder="Buscar por descripción"
+          value={filtroDescripcion}
+          onChange={(evento) => setFiltroDescripcion(evento.target.value)}
+          style={{ maxWidth: 280 }}
+        />
+
+        <Select
+          allowClear
+          placeholder="Filtrar por tipo"
+          value={filtroTipo || undefined}
+          onChange={(tipo) => setFiltroTipo(tipo ?? '')}
+          style={{ width: 240 }}
+          options={opcionesTipo}
+        />
+
+      </div>
+
       {error && <Typography.Text type="danger">{error}</Typography.Text>}
 
       <Table
         rowKey="id"
         columns={columnas}
-        dataSource={gastos}
+        dataSource={gastosFiltrados}
         loading={cargando}
-        pagination={false}
-        locale={{ emptyText: 'Aún no hay gastos registrados' }}
+        pagination={{ pageSize: 8 }}
+        locale={{
+          emptyText: gastos.length ? 'Ningún gasto coincide con los filtros' : 'Aún no hay gastos registrados',
+        }}
       />
 
       <NuevoGastoModal
@@ -100,9 +153,8 @@ const GastosOperativos = () => {
         onCerrar={() => setModalAbierto(false)}
         onCreado={cargarGastos}
       />
-
     </div>
   );
-
 };
+
 export default GastosOperativos;
