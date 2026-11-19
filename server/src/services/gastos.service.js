@@ -1,11 +1,12 @@
+const fs = require('fs/promises');
+const path = require('path');
 const prisma = require('../config/prisma');
+const { CARPETA_COMPROBANTES } = require('../config/comprobantes');
 const { TipoGasto } = require('@prisma/client');
-const LIMITE_HISTORIAL = 20;
 
 async function listarGastos() {
   const gastos = await prisma.gasto.findMany({
     orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
-    take: LIMITE_HISTORIAL,
     include: {
       transmision: { select: { id: true, nombre: true, fecha: true } },
     },
@@ -22,7 +23,7 @@ async function crearGasto(gastoData) {
     data: gastoData,
   });
 
-   return {
+  return {
     ...nuevoGasto,
     valor: Number(nuevoGasto.valor),
   };
@@ -43,6 +44,57 @@ async function obtenerOpciones() {
   };
 }
 
+async function borrarComprobante(nombre) {
+  try {
+    await fs.unlink(path.join(CARPETA_COMPROBANTES, nombre));
+  } catch (error) {
+    console.error('No se pudo borrar el comprobante', nombre, error.message);
+  }
+}
 
+async function obtenerGastoExistente(id) {
+  const gasto = await prisma.gasto.findUnique({ where: { id } });
 
-module.exports = { listarGastos, crearGasto, obtenerOpciones };
+  if (!gasto) {
+    const error = new Error('El gasto no existe');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return gasto;
+}
+
+async function actualizarGasto(id, datos, nuevoComprobante) {
+  const gasto = await obtenerGastoExistente(id);
+
+  const gastoActualizado = await prisma.gasto.update({
+    where: { id },
+    data: {
+      ...datos,
+      transmisionId: datos.transmisionId ?? null,
+      comprobante: nuevoComprobante ?? gasto.comprobante,
+    },
+  });
+
+  if (nuevoComprobante && gasto.comprobante) {
+    await borrarComprobante(gasto.comprobante);
+  }
+
+  return {
+    ...gastoActualizado,
+    valor: Number(gastoActualizado.valor),
+  };
+}
+
+async function eliminarGasto(id) {
+  const gasto = await obtenerGastoExistente(id);
+
+  await prisma.gasto.delete({ where: { id } });
+
+  if (gasto.comprobante) {
+    await borrarComprobante(gasto.comprobante);
+  }
+}
+
+module.exports = { listarGastos, crearGasto, obtenerOpciones, actualizarGasto, eliminarGasto };
+

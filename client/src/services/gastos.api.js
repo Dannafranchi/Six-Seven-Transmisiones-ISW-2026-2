@@ -11,6 +11,19 @@ export function obtenerOpciones() {
 export function crearGasto(datos) {
   return apiFetch('/gastos', {
     method: 'POST',
-    body: JSON.stringify(datos),
+    body: datos,
+    headers: {},
+  });
+}
+
+export function eliminarGasto(id) {
+  return apiFetch(`/gastos/${id}`, { method: 'DELETE'});
+}
+
+export function actualizarGasto(id, datos) {
+  return apiFetch(`/gastos/${id}`, {
+    method: 'PUT',
+    body: datos,
+    headers: {},
   });
 }
