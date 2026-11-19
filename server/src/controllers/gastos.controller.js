@@ -23,7 +23,10 @@ async function obtenerOpciones(req, res) {
 
 async function crearGasto(req, res) {
   try{
-    const gastoCreado = await gastosService.crearGasto(req.body);
+    const gastoCreado = await gastosService.crearGasto({
+     ...req.body,
+     comprobante: req.file?.filename,
+    });
     res.status(201).json(gastoCreado);
   } catch(error){
     console.error('Error al crear el Gasto', error);
