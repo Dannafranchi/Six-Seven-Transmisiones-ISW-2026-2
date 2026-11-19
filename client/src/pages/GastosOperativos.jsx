@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Button, DatePicker, Input, Select, Table, Tag, Typography } from 'antd';
-import { Plus } from 'lucide-react';
+import { Button, DatePicker, Input, Popconfirm, message, Select, Table, Tag, Typography } from 'antd';
+import { Trash2 } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
-import { obtenerGastos } from '../services/gastos.api';
+import { eliminarGasto, obtenerGastos } from '../services/gastos.api';
 import NuevoGastoModal from '../components/gastos/NuevoGastoModal';
 import { etiquetasTipoGasto } from '../components/gastos/etiquetasTipoGasto';
 import { apiUrl } from '../services/api';
@@ -10,10 +10,8 @@ import { apiUrl } from '../services/api';
 const formatoPesos = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
 const formatoFecha = new Intl.DateTimeFormat('es-CL', { timeZone: 'UTC' });
 
-// Para buscar sin importar tildes ni mayúsculas ("alimentacion" encuentra "Alimentación").
 const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-// Opciones del filtro de tipo, separadas en dos grupos (hay un "Otro" en cada uno).
 const tiposConPrefijo = (prefijo) =>
   Object.entries(etiquetasTipoGasto)
     .filter(([valor]) => valor.startsWith(prefijo))
@@ -71,6 +69,7 @@ const GastosOperativos = () => {
   const [filtroDescripcion, setFiltroDescripcion] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroFecha, setFiltroFecha] = useState(null);
+  const [mensaje, contextoMensaje] = message.useMessage();
 
   const cargarGastos = () => {
     setCargando(true);
@@ -85,7 +84,37 @@ const GastosOperativos = () => {
     cargarGastos();
   }, []);
 
-  // Se calcula en cada render a partir de todos los gastos: no se guarda en el estado.
+ const eliminar = async (id) => {
+   try{
+    await eliminarGasto(id);
+    setGastos((actuales) => actuales.filter((gasto) => gasto.id !== id));
+    mensaje.success('Gasto eliminado');
+   } catch {
+    mensaje.error('No se pudo eliminar el gasto');
+   }
+  };
+
+  const columnasConAcciones = [
+    ...columnas,
+    {
+      title: 'Acciones',
+      key: 'acciones',
+      align: 'center',
+      render: (_, gasto) => (
+        <Popconfirm
+          title="¿Eliminar este gasto?"
+          description="Esta acción no se puede deshacer."
+          okText="Eliminar"
+          cancelText="Cancelar"
+          okButtonProps={{ danger: true }}
+          onConfirm={() => eliminar(gasto.id)}
+        >
+         <Button type="text" danger icon={<Trash2 size={16} />} aria-label="Eliminar gasto" /> 
+        </Popconfirm>
+      ),
+    },
+  ];
+
   const gastosFiltrados = gastos.filter((gasto) => {
     const coincideDescripcion = normalizar(gasto.descripcion).includes(normalizar(filtroDescripcion));
     const coincideTipo = !filtroTipo || gasto.tipo === filtroTipo;
@@ -95,6 +124,7 @@ const GastosOperativos = () => {
 
   return (
     <div className="p-2">
+      {contextoMensaje}
       <PageHeader
         title="Gastos Operativos"
         description="Aquí puedes gestionar y revisar los gastos operativos de la empresa."
@@ -139,7 +169,7 @@ const GastosOperativos = () => {
 
       <Table
         rowKey="id"
-        columns={columnas}
+        columns={columnasConAcciones}
         dataSource={gastosFiltrados}
         loading={cargando}
         pagination={{ pageSize: 8 }}

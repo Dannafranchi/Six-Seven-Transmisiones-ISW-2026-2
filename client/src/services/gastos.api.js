@@ -15,3 +15,7 @@ export function crearGasto(datos) {
     headers: {},
   });
 }
+
+export function eliminarGasto(id) {
+  return apiFetch(`/gastos/${id}`, { method: 'DELETE'});
+}
