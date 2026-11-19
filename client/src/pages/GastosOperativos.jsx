@@ -5,6 +5,8 @@ import PageHeader from '../components/ui/PageHeader';
 import { obtenerGastos } from '../services/gastos.api';
 import NuevoGastoModal from '../components/gastos/NuevoGastoModal';
 import { etiquetasTipoGasto } from '../components/gastos/etiquetasTipoGasto';
+import { apiUrl } from '../services/api';
+
 
 
 const formatoPesos = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
@@ -33,6 +35,21 @@ const columnas = [
     align: 'right',
     render: (valor) => formatoPesos.format(valor),
   },
+    {
+    title: 'Comprobante',
+    dataIndex: 'comprobante',
+    key: 'comprobante',
+    align: 'center',
+    render: (comprobante) =>
+      comprobante ? (
+        <a href={apiUrl(`/comprobantes/${comprobante}`)} target="_blank" rel="noreferrer">
+          Ver
+        </a>
+      ) : (
+        '—'
+      ),
+  },
+
 ];
 
 const GastosOperativos = () => {

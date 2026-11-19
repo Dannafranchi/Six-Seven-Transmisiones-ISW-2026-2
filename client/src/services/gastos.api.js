@@ -11,6 +11,7 @@ export function obtenerOpciones() {
 export function crearGasto(datos) {
   return apiFetch('/gastos', {
     method: 'POST',
-    body: JSON.stringify(datos),
+    body: datos,
+    headers: {},
   });
 }

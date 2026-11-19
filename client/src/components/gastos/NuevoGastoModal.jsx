@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { DatePicker, Form, Input, InputNumber, Modal, Segmented, Select, message } from 'antd';
+import { Button, DatePicker, Form, Input, InputNumber, Modal, Segmented, Select, Upload, message } from 'antd';
 import { crearGasto, obtenerOpciones } from '../../services/gastos.api';
 import { etiquetasTipoGasto } from './etiquetasTipoGasto';
 
@@ -11,6 +11,21 @@ const CATEGORIAS = [
 
 const formatoFecha = new Intl.DateTimeFormat('es-CL', { timeZone: 'UTC' });
 const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+const TIPOS_COMPROBANTE = ['image/jpeg', 'image/png', 'application/pdf'];
+const TAMANO_MAXIMO_MB = 5;
+
+const validarComprobante = (_, archivos) => {
+  const archivo = archivos?.[0];
+  if (!archivo) return Promise.resolve();
+  if (!TIPOS_COMPROBANTE.includes(archivo.type)) {
+    return Promise.reject(new Error('El comprobante debe ser JPG, PNG o PDF'));
+  }
+  if (archivo.size > TAMANO_MAXIMO_MB * 1024 * 1024) {
+    return Promise.reject(new Error(`El comprobante no puede superar los ${TAMANO_MAXIMO_MB} MB`));
+  }
+  return Promise.resolve();
+};
 
 const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
   const [form] = Form.useForm();
@@ -38,16 +53,21 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
   };
 
   const guardar = async (valores) => {
-    const datos = {
-      tipo: valores.tipo,
-      descripcion: valores.descripcion,
-      valor: valores.valor,
-    };
+    const datos = new FormData();
+    datos.append('tipo', valores.tipo);
+    datos.append('descripcion', valores.descripcion);
+    datos.append('valor', valores.valor);
 
     if (categoria === 'general') {
-      datos.fecha = valores.fecha.format('YYYY-MM-DD');
+      datos.append('fecha', valores.fecha.format('YYYY-MM-DD'));
     } else {
-      datos.transmisionId = valores.transmisionId;
+      datos.append('transmisionId', valores.transmisionId);
+    }
+
+
+    const archivo = valores.comprobante?.[0]?.originFileObj;
+    if (archivo) {
+      datos.append('comprobante', archivo);
     }
 
     setGuardando(true);
@@ -135,20 +155,32 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
         </Form.Item>
 
 
-          {categoria === 'general' && (
-            <Form.Item name="fecha" label="Fecha" rules={[{ required: true, message: 'Elige la fecha' }]}>
-              <DatePicker
-                format="DD-MM-YYYY"
-                style={{ width: '100%' }}
-                disabledDate={(fecha) => fecha.isAfter(new Date(), 'day')}
-              />
+        {categoria === 'general' && (
+          <Form.Item name="fecha" label="Fecha" rules={[{ required: true, message: 'Elige la fecha' }]}>
+            <DatePicker
+              format="DD-MM-YYYY"
+              style={{ width: '100%' }}
+              disabledDate={(fecha) => fecha.isAfter(new Date(), 'day')}
+            />
+          </Form.Item>
+        )}
 
-            </Form.Item>
-          )}
-        </Form>
-      </Modal>
-    </>
-  );
+        <Form.Item
+          name="comprobante"
+          label="Comprobante (opcional)"
+          valuePropName="fileList"
+          getValueFromEvent={(evento) => evento.fileList}
+          rules={[{ validator: validarComprobante }]}
+          extra={`JPG, PNG o PDF. Máximo ${TAMANO_MAXIMO_MB} MB.`}
+        >
+          <Upload beforeUpload={() => false} maxCount={1} accept=".jpg,.jpeg,.png,.pdf">
+            <Button>Elegir archivo</Button>
+          </Upload>
+        </Form.Item>
+      </Form>
+    </Modal>
+  </>
+ );
 };
 
 export default NuevoGastoModal;
