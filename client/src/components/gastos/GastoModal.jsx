@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import dayjs from 'dayjs';
 import { Button, DatePicker, Form, Input, InputNumber, Modal, Segmented, Select, Upload, message } from 'antd';
-import { crearGasto, obtenerOpciones } from '../../services/gastos.api';
+import { actualizarGasto, crearGasto, obtenerOpciones } from '../../services/gastos.api';
 import { etiquetasTipoGasto } from './etiquetasTipoGasto';
-
 
 const CATEGORIAS = [
   { label: 'Gasto general', value: 'general' },
@@ -27,18 +27,32 @@ const validarComprobante = (_, archivos) => {
   return Promise.resolve();
 };
 
-const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
+const GastoModal = ({ abierto, gasto, onCerrar, onGuardado }) => {
   const [form] = Form.useForm();
   const [mensaje, contextoMensaje] = message.useMessage();
   const [categoria, setCategoria] = useState('general');
   const [opciones, setOpciones] = useState({ tiposGeneral: [], tiposTransmision: [], transmisiones: [] });
   const [guardando, setGuardando] = useState(false);
 
+  const editando = Boolean(gasto);
+
   useEffect(() => {
     if (!abierto) return;
     obtenerOpciones()
       .then(setOpciones)
       .catch(() => mensaje.error('No se pudieron cargar las opciones del formulario'));
+
+    if (gasto) {
+      const esDeTransmision = Boolean(gasto.transmisionId);
+      setCategoria(esDeTransmision ? 'transmision' : 'general');
+      form.setFieldsValue({
+        tipo: gasto.tipo,
+        descripcion: gasto.descripcion,
+        valor: gasto.valor,
+        transmisionId: gasto.transmisionId ?? undefined,
+        fecha: esDeTransmision ? undefined : dayjs(gasto.fecha.slice(0, 10)),
+      });
+    }
   }, [abierto]);
 
   const cambiarCategoria = (valor) => {
@@ -64,7 +78,6 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
       datos.append('transmisionId', valores.transmisionId);
     }
 
-
     const archivo = valores.comprobante?.[0]?.originFileObj;
     if (archivo) {
       datos.append('comprobante', archivo);
@@ -72,10 +85,14 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
 
     setGuardando(true);
     try {
-      await crearGasto(datos);
-      mensaje.success('Gasto guardado');
+      if (editando) {
+        await actualizarGasto(gasto.id, datos);
+      } else {
+        await crearGasto(datos);
+      }
+      mensaje.success(editando ? 'Gasto actualizado' : 'Gasto guardado');
       cerrar();
-      onCreado();
+      onGuardado();
     } catch {
       mensaje.error('No se pudo guardar el gasto. Revisa los datos e intenta de nuevo.');
     } finally {
@@ -89,7 +106,7 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
     <>
       {contextoMensaje}
       <Modal
-        title="Nuevo Gasto"
+        title={editando ? 'Editar Gasto' : 'Nuevo Gasto'}
         open={abierto}
         onCancel={cerrar}
         onOk={() => form.submit()}
@@ -118,7 +135,6 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
                   label: `${t.nombre} (${formatoFecha.format(new Date(t.fecha))})`,
                 }))}
               />
-
             </Form.Item>
           )}
 
@@ -137,7 +153,7 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
             <Input placeholder="Ej: Arriendo oficina diciembre" />
           </Form.Item>
 
-         <Form.Item
+          <Form.Item
             name="valor"
             label="Valor (CLP)"
             rules={[
@@ -145,42 +161,45 @@ const NuevoGastoModal = ({ abierto, onCerrar, onCreado }) => {
               { type: 'integer', message: 'El valor debe ser un número entero' },
               { type: 'number', min: 1, message: 'El valor debe ser mayor que 0' },
             ]}
-        >
+          >
             <InputNumber
               style={{ width: '100%' }}
               placeholder="Ej: 350000"
               formatter={(valor) => `${valor}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
               parser={(texto) => texto.replace(/\./g, '')}
             />
-        </Form.Item>
-
-
-        {categoria === 'general' && (
-          <Form.Item name="fecha" label="Fecha" rules={[{ required: true, message: 'Elige la fecha' }]}>
-            <DatePicker
-              format="DD-MM-YYYY"
-              style={{ width: '100%' }}
-              disabledDate={(fecha) => fecha.isAfter(new Date(), 'day')}
-            />
           </Form.Item>
-        )}
 
-        <Form.Item
-          name="comprobante"
-          label="Comprobante (opcional)"
-          valuePropName="fileList"
-          getValueFromEvent={(evento) => evento.fileList}
-          rules={[{ validator: validarComprobante }]}
-          extra={`JPG, PNG o PDF. Máximo ${TAMANO_MAXIMO_MB} MB.`}
-        >
-          <Upload beforeUpload={() => false} maxCount={1} accept=".jpg,.jpeg,.png,.pdf">
-            <Button>Elegir archivo</Button>
-          </Upload>
-        </Form.Item>
-      </Form>
-    </Modal>
-  </>
- );
+          {categoria === 'general' && (
+            <Form.Item name="fecha" label="Fecha" rules={[{ required: true, message: 'Elige la fecha' }]}>
+              <DatePicker
+                format="DD-MM-YYYY"
+                style={{ width: '100%' }}
+                disabledDate={(fecha) => fecha.isAfter(new Date(), 'day')}
+              />
+            </Form.Item>
+          )}
+
+          <Form.Item
+            name="comprobante"
+            label="Comprobante (opcional)"
+            valuePropName="fileList"
+            getValueFromEvent={(evento) => evento.fileList}
+            rules={[{ validator: validarComprobante }]}
+            extra={
+              gasto?.comprobante
+                ? `Ya tiene un comprobante. Elige otro solo si quieres reemplazarlo (JPG, PNG o PDF, máximo ${TAMANO_MAXIMO_MB} MB).`
+                : `JPG, PNG o PDF. Máximo ${TAMANO_MAXIMO_MB} MB.`
+            }
+          >
+            <Upload beforeUpload={() => false} maxCount={1} accept=".jpg,.jpeg,.png,.pdf">
+              <Button>Elegir archivo</Button>
+            </Upload>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
 };
 
-export default NuevoGastoModal;
+export default GastoModal;

@@ -19,3 +19,11 @@ export function crearGasto(datos) {
 export function eliminarGasto(id) {
   return apiFetch(`/gastos/${id}`, { method: 'DELETE'});
 }
+
+export function actualizarGasto(id, datos) {
+  return apiFetch(`/gastos/${id}`, {
+    method: 'PUT',
+    body: datos,
+    headers: {},
+  });
+}

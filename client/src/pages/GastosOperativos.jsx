@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Button, DatePicker, Input, Popconfirm, message, Select, Table, Tag, Typography } from 'antd';
-import { Trash2 } from 'lucide-react';
+import { Button, DatePicker, Input, Popconfirm, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { Pencil, Trash2 } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import { eliminarGasto, obtenerGastos } from '../services/gastos.api';
-import NuevoGastoModal from '../components/gastos/NuevoGastoModal';
+import GastoModal from '../components/gastos/GastoModal';
 import { etiquetasTipoGasto } from '../components/gastos/etiquetasTipoGasto';
 import { apiUrl } from '../services/api';
 
@@ -66,6 +66,7 @@ const GastosOperativos = () => {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [gastoEditando, setGastoEditando] = useState(null);
   const [filtroDescripcion, setFiltroDescripcion] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroFecha, setFiltroFecha] = useState(null);
@@ -84,14 +85,24 @@ const GastosOperativos = () => {
     cargarGastos();
   }, []);
 
- const eliminar = async (id) => {
-   try{
-    await eliminarGasto(id);
-    setGastos((actuales) => actuales.filter((gasto) => gasto.id !== id));
-    mensaje.success('Gasto eliminado');
-   } catch {
-    mensaje.error('No se pudo eliminar el gasto');
-   }
+  const abrirNuevo = () => {
+    setGastoEditando(null);
+    setModalAbierto(true);
+  };
+
+  const abrirEditar = (gasto) => {
+    setGastoEditando(gasto);
+    setModalAbierto(true);
+  };
+
+  const eliminar = async (id) => {
+    try {
+      await eliminarGasto(id);
+      setGastos((actuales) => actuales.filter((gasto) => gasto.id !== id));
+      mensaje.success('Gasto eliminado');
+    } catch {
+      mensaje.error('No se pudo eliminar el gasto');
+    }
   };
 
   const columnasConAcciones = [
@@ -101,16 +112,24 @@ const GastosOperativos = () => {
       key: 'acciones',
       align: 'center',
       render: (_, gasto) => (
-        <Popconfirm
-          title="¿Eliminar este gasto?"
-          description="Esta acción no se puede deshacer."
-          okText="Eliminar"
-          cancelText="Cancelar"
-          okButtonProps={{ danger: true }}
-          onConfirm={() => eliminar(gasto.id)}
-        >
-         <Button type="text" danger icon={<Trash2 size={16} />} aria-label="Eliminar gasto" /> 
-        </Popconfirm>
+        <Space size={4}>
+          <Button
+            type="text"
+            icon={<Pencil size={16} />}
+            aria-label="Editar gasto"
+            onClick={() => abrirEditar(gasto)}
+          />
+          <Popconfirm
+            title="¿Eliminar este gasto?"
+            description="Esta acción no se puede deshacer."
+            okText="Eliminar"
+            cancelText="Cancelar"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => eliminar(gasto.id)}
+          >
+            <Button type="text" danger icon={<Trash2 size={16} />} aria-label="Eliminar gasto" />
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -131,13 +150,12 @@ const GastosOperativos = () => {
       />
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <Button type="primary" onClick={() => setModalAbierto(true)}>
+        <Button type="primary" onClick={abrirNuevo}>
           Nuevo Gasto
         </Button>
       </div>
 
       <div style={{ display: 'flex', gap: 12, margin: '20px 0' }}>
-
         <DatePicker
           placeholder="Filtrar por fecha"
           format="DD-MM-YYYY"
@@ -162,7 +180,6 @@ const GastosOperativos = () => {
           style={{ width: 240 }}
           options={opcionesTipo}
         />
-
       </div>
 
       {error && <Typography.Text type="danger">{error}</Typography.Text>}
@@ -178,10 +195,11 @@ const GastosOperativos = () => {
         }}
       />
 
-      <NuevoGastoModal
+      <GastoModal
         abierto={modalAbierto}
+        gasto={gastoEditando}
         onCerrar={() => setModalAbierto(false)}
-        onCreado={cargarGastos}
+        onGuardado={cargarGastos}
       />
     </div>
   );
