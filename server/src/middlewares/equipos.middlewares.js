@@ -11,8 +11,8 @@ const tiposPermitidos = [
 ];
 
 const equipoSchema = z.object({
-  nombre: z.string().trim().min(1, 'El nombre es obligatorio.'),
-  modelo: z.string().trim().min(1, 'El modelo es obligatorio.'),
+  nombre: z.string().trim().min(4, 'El nombre es obligatorio.'),
+  modelo: z.string().trim().min(2, 'El modelo es obligatorio.'),
   anio: z
   .number()
   .int('El año debe ser un número entero.')
@@ -30,12 +30,16 @@ const equipoSchema = z.object({
   }),
 }).strict();
 
-function validarEquipo(req, res, next) {
-  const resultado = equipoSchema.safeParse(req.body);
+const idEquipoSchema = z.object({
+  id: z.string().uuid('El identificador del equipo no es válido.'),
+});
+
+function validarIdEquipo(req, res, next) {
+  const resultado = idEquipoSchema.safeParse(req.params);
 
   if (!resultado.success) {
     return res.status(400).json({
-      error: 'Los datos del equipo no son válidos.',
+      error: 'El ID del equipo no es válido.',
       detalles: resultado.error.issues.map((problema) => ({
         campo: problema.path.join('.'),
         mensaje: problema.message,
@@ -43,8 +47,7 @@ function validarEquipo(req, res, next) {
     });
   }
 
-  req.body = resultado.data;
   return next();
 }
 
-module.exports = { validarEquipo };
+module.exports = { validarEquipo, validarIdEquipo };
