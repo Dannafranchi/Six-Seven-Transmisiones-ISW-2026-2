@@ -1,17 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { Form, Input, InputNumber, Modal, Select, message } from 'antd';
-import { crearEquipo } from '../../services/equipos.api';
+import { crearEquipo, modificarEquipo } from '../../services/equipos.api';
 
 const anioActual = new Date().getFullYear();
 
-const EquipoModal = ({ abierto, opcionesTipo, onCerrar, onGuardado }) => {
+const EquipoModal = ({
+  abierto,
+  equipo,
+  opcionesTipo,
+  onCerrar,
+  onGuardado,
+}) => {
   const [form] = Form.useForm();
   const [mensaje, contextoMensaje] = message.useMessage();
   const [guardando, setGuardando] = useState(false);
+  const editando = Boolean(equipo);
 
   useEffect(() => {
-    if (abierto) form.resetFields();
-  }, [abierto, form]);
+    if (!abierto) return;
+
+    form.resetFields();
+
+    if (equipo) {
+      form.setFieldsValue({
+        nombre: equipo.nombre,
+        modelo: equipo.modelo,
+        anio: equipo.anio ?? null,
+        tipo: equipo.tipo,
+        precioCompra: Number(equipo.precioCompra),
+      });
+    }
+  }, [abierto, equipo, form]);
 
   const cerrar = () => {
     form.resetFields();
@@ -19,20 +38,31 @@ const EquipoModal = ({ abierto, opcionesTipo, onCerrar, onGuardado }) => {
   };
 
   const guardar = async (valores) => {
+    const datos = {
+      ...valores,
+      nombre: valores.nombre.trim(),
+      modelo: valores.modelo.trim(),
+      anio: valores.anio ?? null,
+    };
+
     setGuardando(true);
 
     try {
-      await crearEquipo({
-        ...valores,
-        nombre: valores.nombre.trim(),
-        modelo: valores.modelo.trim(),
-        anio: valores.anio ?? null,
-      });
-      mensaje.success('Equipo creado');
+      if (equipo) {
+        await modificarEquipo(equipo.id, datos);
+        mensaje.success('Equipo actualizado.');
+      } else {
+        await crearEquipo(datos);
+        mensaje.success('Equipo creado.');
+      }
+
       cerrar();
       await onGuardado();
     } catch (error) {
-      mensaje.error(error.message || 'No se pudo crear el equipo');
+      mensaje.error(
+        error.message ||
+          (editando ? 'No se pudo actualizar el equipo.' : 'No se pudo crear el equipo.'),
+      );
     } finally {
       setGuardando(false);
     }
@@ -41,12 +71,14 @@ const EquipoModal = ({ abierto, opcionesTipo, onCerrar, onGuardado }) => {
   return (
     <>
       {contextoMensaje}
+
       <Modal
-        title="Nuevo Equipo"
+        centered
+        title={editando ? 'Editar Equipo' : 'Nuevo Equipo'}
         open={abierto}
         onCancel={cerrar}
         onOk={() => form.submit()}
-        okText="Crear Equipo"
+        okText={editando ? 'Guardar cambios' : 'Crear Equipo'}
         cancelText="Cancelar"
         confirmLoading={guardando}
       >

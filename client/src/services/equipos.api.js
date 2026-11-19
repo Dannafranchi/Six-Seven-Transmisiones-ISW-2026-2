@@ -21,3 +21,22 @@ export function modificarEquipo(id, datos) {
     body: JSON.stringify(datos),
   });
 }
+export function cambiarEstadoEquipo(id, estado) {
+  return apiFetch(`/equipos/${id}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ estado }),
+  });
+}
+
+export function iniciarReparacionEquipo(id) {
+  return apiFetch(`/equipos/${id}/reparaciones`, {
+    method: 'POST',
+  });
+}
+
+export function cerrarReparacionEquipo(id, datos) {
+  return apiFetch(`/equipos/${id}/reparaciones/cerrar`, {
+    method: 'PUT',
+    body: JSON.stringify(datos),
+  });
+}
