@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button, InputNumber, Modal, Popconfirm, Select, Space } from 'antd';
+import { Pencil, Trash2 } from 'lucide-react';
 import {
   cambiarEstadoEquipo,
   cerrarReparacionEquipo,
@@ -93,10 +94,13 @@ const EquipoAcciones = ({
 
   return (
     <>
-      <Space wrap>
-        <Button type="link" onClick={onEditar}>
-          Editar
-        </Button>
+      <Space size={4}>
+        <Button
+          type="text"
+          icon={<Pencil size={16} />}
+          aria-label="Editar equipo"
+          onClick={onEditar}
+        />
         <Popconfirm
           title="¿Dar de baja este equipo?"
           description="El equipo dejará de aparecer en el inventario."
@@ -105,9 +109,12 @@ const EquipoAcciones = ({
           okButtonProps={{ danger: true }}
           onConfirm={darDeBaja}
         >
-          <Button type="link" danger>
-            Eliminar
-          </Button>
+          <Button
+            type="text"
+            danger
+            icon={<Trash2 size={16} />}
+            aria-label="Eliminar equipo"
+          />
         </Popconfirm>
         <Button type="link" onClick={abrirModalEstado}>
           Cambiar estado

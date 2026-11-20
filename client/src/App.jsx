@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/ui/Layout';
 import { 
   Agenda, ControlPagos, GastosOperativos, Equipos, Inicio, 
-  Marcas, Mermas, Resumen, TrabajadoresCargos 
+  Kits, Marcas, Mermas, Resumen, TrabajadoresCargos 
 } from './pages';
 
 
@@ -23,6 +23,7 @@ function App() {
           <Route path="personal/control-pagos" element={<ControlPagos />} />
 
           <Route path="inventario/equipos" element={<Equipos />} />
+          <Route path="inventario/kits" element={<Kits />} />
           <Route path="inventario/mermas" element={<Mermas />} />
     
           <Route path="auspicios/marcas" element={<Marcas />} />
