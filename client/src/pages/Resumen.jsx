@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
-import { Alert, Card, Col, DatePicker, Row, Spin, Statistic, Table, Typography } from 'antd';
+import { Alert, Button, Card, Col, DatePicker, Row, Spin, Statistic, Table, Typography } from 'antd';
+import { FileDown } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import { obtenerResumen } from '../services/resumen.api';
 import { armarEstadoResultados, formatearPesos } from '../components/resumen/estadoResultados';
+import { exportarResumenPdf } from '../components/resumen/exportarResumenPdf';
 
 const VERDE = '#389e0d';
 const ROJO = '#cf1322';
@@ -100,6 +102,18 @@ const Resumen = () => {
         description="Ingresos, costos y utilidad del mes, con la ganancia de cada transmisión."
       />
 
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <Button
+          type="primary"
+          icon={<FileDown size={16} />}
+          disabled={!resumen || cargando}
+          onClick={() => exportarResumenPdf(resumen)}
+        >
+          Exportar PDF
+        </Button>
+      </div>
+
+
       <div style={{ display: 'flex', gap: 12, margin: '20px 0', alignItems: 'center' }}>
         <span>Mes:</span>
         <DatePicker
@@ -178,7 +192,7 @@ const Resumen = () => {
                   rowKey="id"
                   columns={columnas}
                   dataSource={resumen.transmisiones}
-                  pagination={false}
+                  pagination={{ pageSize: 10 }}
                   locale={{ emptyText: 'No hay transmisiones en este mes' }}
                   summary={() =>
                     resumen.transmisiones.length > 0 && (
