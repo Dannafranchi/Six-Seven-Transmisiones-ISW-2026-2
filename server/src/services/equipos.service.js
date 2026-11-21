@@ -40,6 +40,28 @@ function errorConEstado(statusCode, message) {
   return error;
 }
 
+async function registrarInhabilitacion(tx, equipo, fecha) {
+  const costosReparaciones = await tx.reparacionEquipo.aggregate({
+    where: { equipoId: equipo.id },
+    _sum: { costo: true },
+  });
+  const precioCompra = equipo.precioCompra.toFixed(0);
+  const costoReparaciones = costosReparaciones._sum.costo?.toFixed(0) ?? '0';
+  const montoPerdida = (
+    BigInt(precioCompra) + BigInt(costoReparaciones)
+  ).toString();
+
+  await tx.inhabilitacionEquipo.create({
+    data: {
+      equipoId: equipo.id,
+      fecha,
+      precioCompra,
+      costoReparaciones,
+      montoPerdida,
+    },
+  });
+}
+
 async function listarEquipos() {
   const equipos = await prisma.equipo.findMany({
     where: { archivadoAt: null },
@@ -133,6 +155,7 @@ async function cerrarReparacion(id, datos) {
       select: {
         id: true,
         estado: true,
+        precioCompra: true,
         kit: { select: { id: true, nombre: true } },
       },
     });
@@ -148,10 +171,11 @@ async function cerrarReparacion(id, datos) {
       throw errorConEstado(409, 'El equipo no tiene una reparación abierta.');
     }
 
+    const fechaFin = new Date();
     await tx.reparacionEquipo.update({
       where: { id: reparacion.id },
       data: {
-        fechaFin: new Date(),
+        fechaFin,
         costo: String(datos.costo),
       },
     });
@@ -164,6 +188,10 @@ async function cerrarReparacion(id, datos) {
       },
       include: incluirReparaciones,
     });
+
+    if (datos.estadoFinal === EstadoEquipo.INHABILITADO) {
+      await registrarInhabilitacion(tx, equipo, fechaFin);
+    }
 
     return presentarEquipo(
       equipoActualizado,
@@ -206,6 +234,7 @@ async function cambiarEstadoDirecto(id, estadoNuevo) {
       select: {
         id: true,
         estado: true,
+        precioCompra: true,
         kit: { select: { id: true, nombre: true } },
       },
     });
@@ -231,6 +260,7 @@ async function cambiarEstadoDirecto(id, estadoNuevo) {
       throw errorConEstado(409, 'Ese cambio de estado no está permitido directamente.');
     }
 
+    const fechaCambioEstado = new Date();
     const actualizado = await tx.equipo.update({
       where: { id },
       data: {
@@ -239,6 +269,10 @@ async function cambiarEstadoDirecto(id, estadoNuevo) {
       },
       include: incluirReparaciones,
     });
+
+    if (estadoNuevo === EstadoEquipo.INHABILITADO) {
+      await registrarInhabilitacion(tx, equipo, fechaCambioEstado);
+    }
 
     return presentarEquipo(
       actualizado,
