@@ -1,14 +1,5 @@
 const { z } = require('zod');
-
-const tiposPermitidos = [
-  'CAMARA',
-  'TRIPODE',
-  'MICROFONO',
-  'PANEL_SONIDO',
-  'CABLE',
-  'PANEL_SWITCH',
-  'OTRO',
-];
+const { TipoEquipo, EstadoEquipo } = require('@prisma/client');
 
 const equipoSchema = z.object({
   nombre: z.string().trim().min(4, 'El nombre es obligatorio.'),
@@ -25,7 +16,7 @@ const equipoSchema = z.object({
     .int('El precio debe ser un número entero.')
     .min(0, 'El precio debe ser igual o mayor a $0.')
     .max(999999999999, 'El precio supera el máximo permitido.'),
-  tipo: z.enum(tiposPermitidos, {
+  tipo: z.enum(Object.values(TipoEquipo), {
     error: 'Selecciona un tipo válido.',
   }),
 }).strict();
@@ -40,14 +31,17 @@ const cerrarReparacionSchema = z.object({
     .int('El costo debe ser un número entero.')
     .min(0, 'El costo no puede ser negativo.')
     .max(999999999999, 'El costo supera el máximo permitido.'),
-  estadoFinal: z.enum(['BUENO', 'INHABILITADO'], {
-    error: 'Elige BUENO o INHABILITADO como estado final.',
-  }),
+  estadoFinal: z.enum(
+    [EstadoEquipo.BUENO, EstadoEquipo.INHABILITADO],
+    { error: 'Elige BUENO o INHABILITADO como estado final.' },
+  ),
 }).strict();
+
 const cambiarEstadoDirectoSchema = z.object({
-  estado: z.enum(['BUENO', 'INHABILITADO'], {
-    error: 'Selecciona un estado válido.',
-  }),
+  estado: z.enum(
+    [EstadoEquipo.BUENO, EstadoEquipo.INHABILITADO],
+    { error: 'Selecciona un estado válido.' },
+  ),
 }).strict();
 
 module.exports = {
