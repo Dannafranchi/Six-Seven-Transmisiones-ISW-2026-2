@@ -4,7 +4,7 @@ import { Menu } from 'antd';
 import { 
   CircleDollarSign, PieChart,
   Calendar, Package, Handshake, Users, 
-  Home, Monitor, Trash2, Tag, UserCheck, CreditCard, Receipt
+  Home, Monitor, Trash2, Tag, UserCheck, CreditCard, Receipt, Boxes
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -28,6 +28,7 @@ const Sidebar = () => {
       icon: <Package size={18} />,
       children: [
         { key: '/inventario/equipos', label: 'Equipos', icon: <Monitor size={16} /> },
+        { key: '/inventario/kits', label: 'Kits', icon: <Boxes size={16} /> },
         { key: '/inventario/mermas', label: 'Mermas', icon: <Trash2 size={16} /> }
       ],
     },
