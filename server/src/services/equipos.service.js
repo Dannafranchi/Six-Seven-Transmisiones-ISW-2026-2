@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { EstadoEquipo } = require('@prisma/client');
 
 const incluirReparaciones = {
   reparaciones: {
@@ -12,7 +13,7 @@ const incluirReparaciones = {
   },
 };
 
-function presentarEquipo(equipo) {
+function presentarEquipo(equipo, kitDesvinculado = null) {
   const reparaciones = equipo.reparaciones ?? [];
   const precioCompra = Number(equipo.precioCompra);
   const costoReparaciones = reparaciones.reduce(
@@ -29,6 +30,7 @@ function presentarEquipo(equipo) {
     })),
     costoReparaciones,
     costoTotal: precioCompra + costoReparaciones,
+    ...(kitDesvinculado ? { kitDesvinculado } : {}),
   };
 }
 
@@ -36,6 +38,28 @@ function errorConEstado(statusCode, message) {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+}
+
+async function registrarInhabilitacion(tx, equipo, fecha) {
+  const costosReparaciones = await tx.reparacionEquipo.aggregate({
+    where: { equipoId: equipo.id },
+    _sum: { costo: true },
+  });
+  const precioCompra = equipo.precioCompra.toFixed(0);
+  const costoReparaciones = costosReparaciones._sum.costo?.toFixed(0) ?? '0';
+  const montoPerdida = (
+    BigInt(precioCompra) + BigInt(costoReparaciones)
+  ).toString();
+
+  await tx.inhabilitacionEquipo.create({
+    data: {
+      equipoId: equipo.id,
+      fecha,
+      precioCompra,
+      costoReparaciones,
+      montoPerdida,
+    },
+  });
 }
 
 async function listarEquipos() {
@@ -89,7 +113,11 @@ async function iniciarReparacion(id) {
   return prisma.$transaction(async (tx) => {
     const equipo = await tx.equipo.findFirst({
       where: { id, archivadoAt: null },
-      select: { id: true, estado: true },
+      select: {
+        id: true,
+        estado: true,
+        kit: { select: { id: true, nombre: true } },
+      },
     });
 
     if (!equipo) return null;
@@ -99,7 +127,7 @@ async function iniciarReparacion(id) {
       select: { id: true },
     });
 
-    if (equipo.estado === 'EN_REPARACION' || reparacionAbierta) {
+    if (equipo.estado === EstadoEquipo.EN_REPARACION || reparacionAbierta) {
       throw errorConEstado(409, 'El equipo ya tiene una reparación abierta.');
     }
 
@@ -112,11 +140,11 @@ async function iniciarReparacion(id) {
 
     const equipoActualizado = await tx.equipo.update({
       where: { id },
-      data: { estado: 'EN_REPARACION' },
+      data: { estado: EstadoEquipo.EN_REPARACION, kitId: null },
       include: incluirReparaciones,
     });
 
-    return presentarEquipo(equipoActualizado);
+    return presentarEquipo(equipoActualizado, equipo.kit);
   });
 }
 
@@ -124,7 +152,12 @@ async function cerrarReparacion(id, datos) {
   return prisma.$transaction(async (tx) => {
     const equipo = await tx.equipo.findFirst({
       where: { id, archivadoAt: null },
-      select: { id: true, estado: true },
+      select: {
+        id: true,
+        estado: true,
+        precioCompra: true,
+        kit: { select: { id: true, nombre: true } },
+      },
     });
 
     if (!equipo) return null;
@@ -134,25 +167,36 @@ async function cerrarReparacion(id, datos) {
       orderBy: { fechaInicio: 'desc' },
     });
 
-    if (!reparacion || equipo.estado !== 'EN_REPARACION') {
+    if (!reparacion || equipo.estado !== EstadoEquipo.EN_REPARACION) {
       throw errorConEstado(409, 'El equipo no tiene una reparación abierta.');
     }
 
+    const fechaFin = new Date();
     await tx.reparacionEquipo.update({
       where: { id: reparacion.id },
       data: {
-        fechaFin: new Date(),
+        fechaFin,
         costo: String(datos.costo),
       },
     });
 
     const equipoActualizado = await tx.equipo.update({
       where: { id },
-      data: { estado: datos.estadoFinal },
+      data: {
+        estado: datos.estadoFinal,
+        ...(datos.estadoFinal === EstadoEquipo.BUENO ? {} : { kitId: null }),
+      },
       include: incluirReparaciones,
     });
 
-    return presentarEquipo(equipoActualizado);
+    if (datos.estadoFinal === EstadoEquipo.INHABILITADO) {
+      await registrarInhabilitacion(tx, equipo, fechaFin);
+    }
+
+    return presentarEquipo(
+      equipoActualizado,
+      datos.estadoFinal === EstadoEquipo.BUENO ? null : equipo.kit,
+    );
   });
 }
 
@@ -170,13 +214,13 @@ async function archivarEquipo(id) {
       select: { id: true },
     });
 
-    if (equipo.estado === 'EN_REPARACION' || reparacionAbierta) {
+    if (equipo.estado === EstadoEquipo.EN_REPARACION || reparacionAbierta) {
       throw errorConEstado(409, 'Primero debes cerrar la reparación del equipo.');
     }
 
     const resultado = await tx.equipo.updateMany({
       where: { id, archivadoAt: null },
-      data: { archivadoAt: new Date() },
+      data: { archivadoAt: new Date(), kitId: null },
     });
 
     return resultado.count > 0;
@@ -187,7 +231,12 @@ async function cambiarEstadoDirecto(id, estadoNuevo) {
   return prisma.$transaction(async (tx) => {
     const equipo = await tx.equipo.findFirst({
       where: { id, archivadoAt: null },
-      select: { id: true, estado: true },
+      select: {
+        id: true,
+        estado: true,
+        precioCompra: true,
+        kit: { select: { id: true, nombre: true } },
+      },
     });
 
     if (!equipo) return null;
@@ -197,27 +246,41 @@ async function cambiarEstadoDirecto(id, estadoNuevo) {
       select: { id: true },
     });
 
-    if (equipo.estado === 'EN_REPARACION' || reparacionAbierta) {
+    if (equipo.estado === EstadoEquipo.EN_REPARACION || reparacionAbierta) {
       throw errorConEstado(409, 'Primero debes cerrar la reparación abierta.');
     }
 
     const transicionPermitida =
-      (equipo.estado === 'BUENO' && estadoNuevo === 'INHABILITADO') ||
-      (equipo.estado === 'INHABILITADO' && estadoNuevo === 'BUENO');
+      (equipo.estado === EstadoEquipo.BUENO &&
+        estadoNuevo === EstadoEquipo.INHABILITADO) ||
+      (equipo.estado === EstadoEquipo.INHABILITADO &&
+        estadoNuevo === EstadoEquipo.BUENO);
 
     if (!transicionPermitida) {
       throw errorConEstado(409, 'Ese cambio de estado no está permitido directamente.');
     }
 
+    const fechaCambioEstado = new Date();
     const actualizado = await tx.equipo.update({
       where: { id },
-      data: { estado: estadoNuevo },
+      data: {
+        estado: estadoNuevo,
+        ...(estadoNuevo === EstadoEquipo.BUENO ? {} : { kitId: null }),
+      },
       include: incluirReparaciones,
     });
 
-    return presentarEquipo(actualizado);
+    if (estadoNuevo === EstadoEquipo.INHABILITADO) {
+      await registrarInhabilitacion(tx, equipo, fechaCambioEstado);
+    }
+
+    return presentarEquipo(
+      actualizado,
+      estadoNuevo === EstadoEquipo.BUENO ? null : equipo.kit,
+    );
   });
 }
+
 module.exports = {
   listarEquipos,
   crearEquipo,

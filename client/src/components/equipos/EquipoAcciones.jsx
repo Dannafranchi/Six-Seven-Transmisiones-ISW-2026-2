@@ -65,18 +65,28 @@ const EquipoAcciones = ({
     setGuardandoCambioEstado(true);
 
     try {
+      let resultado;
+
       if (estadoElegido === 'EN_REPARACION') {
-        await iniciarReparacionEquipo(equipo.id);
+        resultado = await iniciarReparacionEquipo(equipo.id);
       } else if (equipo.estado === 'EN_REPARACION') {
-        await cerrarReparacionEquipo(equipo.id, {
+        resultado = await cerrarReparacionEquipo(equipo.id, {
           costo: Number(costoReparacion),
           estadoFinal: estadoElegido,
         });
       } else {
-        await cambiarEstadoEquipo(equipo.id, estadoElegido);
+        resultado = await cambiarEstadoEquipo(equipo.id, estadoElegido);
       }
 
-      mensaje.success('Estado del equipo actualizado.');
+      if (resultado?.kitDesvinculado) {
+        mensaje.warning(
+          `${equipo.nombre} fue retirado del kit "${resultado.kitDesvinculado.nombre}" porque dejó de estar disponible. Revisa si el kit necesita un reemplazo.`,
+          6,
+        );
+      } else {
+        mensaje.success('Estado del equipo actualizado.');
+      }
+
       setModalEstadoAbierto(false);
       setEstadoElegido(null);
       setCostoReparacion(null);
