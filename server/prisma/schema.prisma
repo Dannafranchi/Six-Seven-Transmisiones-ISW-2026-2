@@ -8,10 +8,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum RolUsuario {
+  ADMINISTRADOR
+  CONTADOR
+  TECNICO
+}
+
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  name         String
+  rut          String     @unique
+  passwordHash String
+  rol          RolUsuario
 }
 
 // Hace base de datos donde definimos las tablas y relaciones.
